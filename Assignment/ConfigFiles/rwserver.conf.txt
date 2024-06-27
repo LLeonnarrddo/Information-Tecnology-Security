@@ -1,0 +1,25 @@
+local 192.168.40.134
+port 1195
+proto udp
+dev tun
+ca /usr/share/easy-rsa/pki/ca.crt
+cert /usr/share/easy-rsa/pki/issued/serverCoimbra.crt
+key /usr/share/easy-rsa/pki/private/serverCoimbra.key
+dh /usr/share/easy-rsa/pki/dh.pem
+server 10.8.0.0 255.255.255.0
+
+script-security 2
+tls-verify /usr/share/easy-rsa/pki/runOCSP.sh
+
+
+# Enable PAM authentication
+plugin /usr/lib/openvpn/openvpn-plugin-auth-pam.so openvpn
+
+#verb 3
+
+push "route 10.10.0.0 255.255.255.0"
+
+tls-auth /usr/share/easy-rsa/pki/ta.key 0
+
+persist-tun
+keepalive 10 120

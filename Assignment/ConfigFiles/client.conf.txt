@@ -1,0 +1,11 @@
+client
+dev tun
+proto udp
+remote 192.168.40.134 1194
+persist-key
+persist-tun
+ca /usr/share/easy-rsa/pki/ca.crt
+cert /usr/share/easy-rsa/pki/issued/lisbon.crt
+key /usr/share/easy-rsa/pki/private/lisbon.key
+
+tls-auth /usr/share/easy-rsa/pki/ta.key 1
