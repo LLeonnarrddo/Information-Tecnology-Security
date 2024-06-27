@@ -2,57 +2,93 @@
 
 flush ruleset
 
-table inet filter {
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority 0; policy accept;
+
+        ip saddr 192.168.43.240 tcp dport 2021 counter packets 0 bytes 0 dnat to 10.20.20.100:22
+
+        ip saddr 192.168.43.240 tcp dport 2022 counter packets 0 bytes 0 dnat to 10.20.20.100:2022
+
+        ip saddr 192.168.43.240 tcp dport 3306 counter packets 0 bytes 0 dnat to 10.10.10.100:3306
+
+        ip saddr 192.168.43.240 tcp dport 53 counter packets 0 bytes 0 dnat to 10.10.10.100:53
+
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority 100; policy accept;
+
+        ip saddr 10.10.10.0/24 oifname "eth0" counter packets 0 bytes 0 masquerade
+        ip saddr 10.20.20.0/24 oifname "eth0" counter packets 0 bytes 0 masquerade
+
+    }
+}
+
+
+table ip router{
         chain debug {
                 type filter hook prerouting priority 101;
                 ip protocol { tcp,udp } meta nftrace set 1;
         }
 
-        chain input {
-                type filter hook input priority filter;
-        }
-
         chain forward {
                 type filter hook forward priority 0; policy drop;
 
-                ct state established,related counter accept
+                #suricata
+                #queue;
 
+
+                #Aceita pacotes de conexões estabelecidas e relacionadas
+                ct state established,related counter accept 
+
+                #Permite tráfego UDP e TCP para o endereço IP 10.10.10.100 na porta 53 (DNS)
                 udp dport 53 ip daddr 10.10.10.100 counter accept
                 tcp dport 53 ip daddr 10.10.10.100 counter accept
 
+                #Permite tráfego UDP e TCP para o endereço IP dns2 193.137.16.75 dns.uminho.pt na porta 53 (DNS)
                 udp dport 53 ip daddr 193.137.16.75 counter accept
 
+                #Permite tráfego UDP para o endereço IP dns cloudflare na porta 53 (DNS)
                 udp dport 53 ip daddr 1.1.1.1 counter accept
 
+                #Permite tráfego tcp  para sincronização de dns na porta 53 (DNS)
                 tcp dport 53 ip daddr 192.168.43.240 counter accept
 
+                #Permite tráfego UDP para o endereço IP dns google-generico na porta 53 (DNS)
                 udp dport 53 ip daddr 8.8.8.8 counter accept
 
+                #Permite tráfego TCP para o endereço IP 10.10.10.100 na porta 25 (SMTP)
                 tcp dport 25 ip daddr 10.10.10.100 counter accept
 
+                #Permite tráfego TCP para o endereço IP 10.10.10.100 nas portas 110 (POP3) e 143 (IMAP)
                 tcp dport {110,143} ip daddr 10.10.10.100 counter accept
 
+                #Permite tráfego TCP para o endereço IP 10.10.10.100 nas portas 80 (HTTP) e 443 (HTTPS)
                 tcp dport {80,443} ip daddr 10.10.10.100 counter accept
 
+                #Permite tráfego UDP para o endereço IP 10.10.10.100 na porta 1194 (OpenVPN)
                 udp dport 1194 ip daddr 10.10.10.100 counter accept
 
+                #Permite trafego ping
                 ip protocol icmp counter accept
 
+                #Aceitar pacotes com DNAT realizados -ssh com port 2022 - mantida
                 ip saddr 192.168.43.240 ip daddr 10.20.20.100 tcp dport 2022 counter accept
 
+                #Aceitar o tráfego para o destino NAT -ssh com port 2021 para 22 com o max de 2 ligações
                 ip saddr 192.168.43.240 ip daddr 10.20.20.100 tcp dport 22 ct count 2 counter accept
 
+                #Permitir o trafego dos clientes dhcp para vm internet
                 ip saddr 10.20.20.0/24 oif "eth0" tcp dport {ssh} counter accept
 
+                #Permitir o trafego dos clientes dhcp para a internet {http, https}
                 ip saddr 10.20.20.0/24 oif "eth0" tcp dport {http, https} counter accept
 
+                # permitir o trafego para o maria_db
                 ip saddr 192.168.43.240 ip daddr 10.10.10.100 tcp dport 3306 counter accept
 
-        }
-
-        chain output {
-                type filter hook output priority filter;
-        }
+    }
 }
 
 define guarded_ports = {ssh}
